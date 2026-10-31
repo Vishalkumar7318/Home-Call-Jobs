@@ -119,7 +119,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onSwitchToPub
                 <input
                   type="text"
                   required
-                  placeholder="e.g. vishal731808@gmail.com"
+                  placeholder=""
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value);
