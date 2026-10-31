@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User authentication and role mapping record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "User UID from Firebase Auth" },
+        "email": { "type": "string", "description": "User email address" },
+        "role": { "type": "string", "enum": ["admin", "employee"], "description": "Access role" },
+        "employeeId": { "type": "string", "description": "Associated employee ID if applicable" },
+        "displayName": { "type": "string", "description": "Display name" },
+        "createdAt": { "type": "string", "description": "Account creation timestamp" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Official employee profile and credentials record",
+      "type": "object",
+      "properties": {
+        "employeeId": { "type": "string", "description": "Unique assigned Employee ID, e.g. HCJ-101", "maxLength": 50 },
+        "fullName": { "type": "string", "description": "Full legal name of the employee", "maxLength": 100 },
+        "mobileNumber": { "type": "string", "description": "Mobile contact number", "maxLength": 20 },
+        "email": { "type": "string", "description": "Official or personal email address", "maxLength": 100 },
+        "address": { "type": "string", "description": "Residential address", "maxLength": 250 },
+        "department": { "type": "string", "description": "Department such as Telecalling, Sales, Support", "maxLength": 100 },
+        "designation": { "type": "string", "description": "Job designation/title", "maxLength": 100 },
+        "joiningDate": { "type": "string", "description": "Date of joining in YYYY-MM-DD", "maxLength": 20 },
+        "employmentStatus": { "type": "string", "enum": ["Active", "On Leave", "Terminated"], "description": "Current employment status" },
+        "profilePicture": { "type": "string", "description": "Profile picture URL or avatar placeholder", "maxLength": 500 },
+        "password": { "type": "string", "description": "Employee portal login password", "maxLength": 100 },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp" }
+      },
+      "required": ["employeeId", "fullName", "mobileNumber", "joiningDate", "employmentStatus"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily employee attendance record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique composite key: employeeId_YYYY-MM-DD" },
+        "employeeId": { "type": "string", "description": "Target Employee ID", "maxLength": 50 },
+        "employeeName": { "type": "string", "description": "Name of employee at mark time", "maxLength": 100 },
+        "date": { "type": "string", "description": "Attendance date in YYYY-MM-DD", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["Present", "Absent", "Leave"], "description": "Attendance status" },
+        "markedBy": { "type": "string", "description": "Admin email or UID that marked this record", "maxLength": 100 },
+        "remarks": { "type": "string", "description": "Optional notes or reason for leave/absence", "maxLength": 250 },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp" }
+      },
+      "required": ["employeeId", "date", "status"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Recruitment job opportunity listing",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Job title", "maxLength": 150 },
+        "companyName": { "type": "string", "description": "Hiring company name", "maxLength": 100 },
+        "category": { "type": "string", "description": "Job category e.g. Telecalling, Telesales, Support", "maxLength": 100 },
+        "description": { "type": "string", "description": "Full job description", "maxLength": 5000 },
+        "responsibilities": { "type": "string", "description": "Key responsibilities", "maxLength": 3000 },
+        "salary": { "type": "string", "description": "Salary range or package", "maxLength": 100 },
+        "incentives": { "type": "string", "description": "Incentives and bonuses", "maxLength": 200 },
+        "location": { "type": "string", "description": "City or region", "maxLength": 100 },
+        "workType": { "type": "string", "enum": ["Work From Home", "Work From Office", "Hybrid"], "description": "Work style" },
+        "workingHours": { "type": "string", "description": "Working shift hours", "maxLength": 100 },
+        "weeklyOff": { "type": "string", "description": "Weekly day off", "maxLength": 100 },
+        "qualification": { "type": "string", "description": "Minimum educational qualification", "maxLength": 100 },
+        "requiredSkills": { "type": "string", "description": "Required skills and abilities", "maxLength": 500 },
+        "experienceRequired": { "type": "string", "description": "Experience requirements", "maxLength": 100 },
+        "selectionProcess": { "type": "string", "description": "Hiring and selection stages", "maxLength": 500 },
+        "applicationInstructions": { "type": "string", "description": "Instructions for candidates", "maxLength": 500 },
+        "isPublished": { "type": "string", "description": "Boolean flag or published state", "maxLength": 10 },
+        "createdAt": { "type": "string", "description": "Timestamp" },
+        "updatedAt": { "type": "string", "description": "Timestamp" }
+      },
+      "required": ["title", "category", "salary", "workType"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Site-wide configuration settings",
+      "type": "object",
+      "properties": {
+        "whatsappNumber": { "type": "string", "description": "Admin WhatsApp phone number without plus", "maxLength": 25 },
+        "whatsappDefaultMessage": { "type": "string", "description": "Pre-filled message for job applications", "maxLength": 300 },
+        "contactEmail": { "type": "string", "description": "Contact email address", "maxLength": 100 },
+        "contactPhone": { "type": "string", "description": "Contact telephone number", "maxLength": 50 },
+        "companyAddress": { "type": "string", "description": "Company physical address", "maxLength": 250 },
+        "updatedAt": { "type": "string", "description": "Timestamp" }
+      },
+      "required": ["whatsappNumber"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile with role"
+    },
+    "/employees/{employeeDocId}": {
+      "schema": "Employee",
+      "description": "Employee database records"
+    },
+    "/attendance/{attendanceDocId}": {
+      "schema": "Attendance",
+      "description": "Daily employee attendance entries"
+    },
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Job recruitment listings"
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Global application configuration"
+    }
+  }
+}

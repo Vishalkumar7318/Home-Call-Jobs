@@ -1,0 +1,6 @@
+{
+  "name": "Home Call Jobs",
+  "description": "Professional Job Recruitment and Employee Management Platform for telecalling, customer support, and sales careers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
