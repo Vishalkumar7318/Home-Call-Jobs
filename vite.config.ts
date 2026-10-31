@@ -9,7 +9,7 @@ const rootDir = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig(() => {
   return {
-    base: '/Home-Call-Jobs/',
+   base: '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
