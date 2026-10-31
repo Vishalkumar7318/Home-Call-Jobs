@@ -1,3 +1,4 @@
+
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -8,6 +9,7 @@ const rootDir = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig(() => {
   return {
+    base: '/Home-Call-Jobs/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
