@@ -8,10 +8,14 @@ import {
   X,
   AlertCircle,
   ExternalLink,
+  Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import type { Employee } from '../../types';
-import { addEmployee, updateEmployee, deleteEmployee } from '../../services/db';
+import { addEmployee, updateEmployee, deleteEmployee, getEmployeeByEmployeeId } from '../../services/db';
 import { formatFriendlyError } from '../../firebase/errors';
+import { createEmployeeAuthAccount } from '../../firebase/config';
 
 interface EmployeeManagerProps {
   employees: Employee[];
@@ -32,27 +36,39 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onR
     employeeId: '',
     fullName: '',
     mobileNumber: '',
+    password: '',
     joiningDate: new Date().toISOString().split('T')[0],
     employmentStatus: 'Active' as 'Active' | 'On Leave' | 'Terminated',
   });
+  const [showPassword, setShowPassword] = useState(false);
 
-  const isIdValid = formData.employeeId.trim().length >= 3;
+  const isIdValid = /^[A-Z0-9][A-Z0-9-]{2,49}$/.test(formData.employeeId.trim());
   const isNameValid = formData.fullName.trim().length >= 2;
   const cleanMobile = formData.mobileNumber.replace(/[^0-9]/g, '');
   const isMobileValid = cleanMobile.length === 10;
+  const isPasswordValid = formData.password.length >= 6;
 
   const handleOpenAdd = () => {
     setEditingEmp(null);
     setFormError(null);
     setTouched({});
-    const nextNum = employees.length + 101;
+    const usedNumbers = new Set(
+      employees
+        .map((employee) => /^HCJ-(\d+)$/i.exec(employee.employeeId)?.[1])
+        .filter((value): value is string => value !== undefined)
+        .map(Number)
+    );
+    let nextNum = 101;
+    while (usedNumbers.has(nextNum)) nextNum += 1;
     setFormData({
       employeeId: `HCJ-${nextNum}`,
       fullName: '',
       mobileNumber: '',
+      password: '',
       joiningDate: new Date().toISOString().split('T')[0],
       employmentStatus: 'Active',
     });
+    setShowPassword(false);
     setModalOpen(true);
   };
 
@@ -64,19 +80,32 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onR
       employeeId: emp.employeeId,
       fullName: emp.fullName,
       mobileNumber: emp.mobileNumber,
+      password: '',
       joiningDate: emp.joiningDate,
       employmentStatus: emp.employmentStatus,
     });
+    setShowPassword(false);
     setModalOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setModalOpen(false);
+    setFormData((previous) => ({ ...previous, password: '' }));
+    setShowPassword(false);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    setTouched({ employeeId: true, fullName: true, mobileNumber: true });
+    setTouched({
+      employeeId: true,
+      fullName: true,
+      mobileNumber: true,
+      ...(!editingEmp ? { password: true } : {}),
+    });
 
     if (!isIdValid) {
-      setFormError('Employee ID kam se kam 3 akshar hona chahiye.');
+      setFormError('Employee ID mein sirf letters, numbers aur hyphen dalein.');
       return;
     }
     if (!isNameValid) {
@@ -85,6 +114,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onR
     }
     if (!isMobileValid) {
       setFormError('Mobile number galat hai (10 anko ka valid number dalein).');
+      return;
+    }
+    if (!editingEmp && !isPasswordValid) {
+      setFormError('Password kam se kam 6 characters ka hona chahiye.');
       return;
     }
 
@@ -98,19 +131,32 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onR
           employmentStatus: formData.employmentStatus,
         });
       } else {
+        const employeeId = formData.employeeId.trim().toUpperCase();
+        if (await getEmployeeByEmployeeId(employeeId)) {
+          throw new Error(`Employee ID "${employeeId}" already exists. Please choose a different ID.`);
+        }
+        const authUid = await createEmployeeAuthAccount(employeeId, formData.password);
         await addEmployee({
-          employeeId: formData.employeeId.trim().toUpperCase(),
+          employeeId,
+          authUid,
           fullName: formData.fullName.trim(),
           mobileNumber: cleanMobile,
           joiningDate: formData.joiningDate,
           employmentStatus: formData.employmentStatus,
         });
       }
-      setModalOpen(false);
+      handleCloseForm();
       onRefresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error saving employee:', err);
-      setFormError(formatFriendlyError(err));
+      const code = typeof err === 'object' && err !== null && 'code' in err
+        ? String(err.code)
+        : '';
+      setFormError(
+        code === 'auth/email-already-in-use'
+          ? 'A login account already exists for this Employee ID.'
+          : formatFriendlyError(err)
+      );
     } finally {
       setSaving(false);
     }
@@ -270,7 +316,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onR
                 {editingEmp ? 'Edit Employee' : 'Add New Employee'}
               </h3>
               <button
-                onClick={() => setModalOpen(false)}
+                onClick={handleCloseForm}
                 className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"
               >
                 <X className="w-5 h-5" />
@@ -294,7 +340,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onR
                     {touched.employeeId && !isIdValid && (
                       <span className="text-[10px] font-bold text-red-600 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
-                        गलत (कम से कम 3 अक्षर)
+                        केवल अक्षर, अंक और - मान्य हैं
                       </span>
                     )}
                   </div>
@@ -376,6 +422,55 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onR
                 </div>
               </div>
 
+              {!editingEmp && (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase text-slate-700">
+                      Employee Password *
+                    </label>
+                    {touched.password && !isPasswordValid && (
+                      <span className="text-[10px] font-bold text-red-600">
+                        At least 6 characters
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      autoComplete="new-password"
+                      placeholder="Set employee login password"
+                      value={formData.password}
+                      onBlur={() => setTouched((previous) => ({ ...previous, password: true }))}
+                      onChange={(event) => {
+                        setFormData({ ...formData, password: event.target.value });
+                        setTouched((previous) => ({ ...previous, password: true }));
+                      }}
+                      className={`w-full pl-10 pr-12 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                        touched.password && !isPasswordValid
+                          ? 'border-red-500 bg-red-50/50 text-red-900 focus:outline-none focus:ring-2 focus:ring-red-400'
+                          : 'border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 bg-slate-50 text-slate-800'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword
+                        ? <EyeOff className="w-4 h-4" />
+                        : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Employee will sign in with this password and their Employee ID.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -422,7 +517,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onR
                   </label>
                   <select
                     value={formData.employmentStatus}
-                    onChange={(e) => setFormData({ ...formData, employmentStatus: e.target.value as any })}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      employmentStatus: e.target.value as Employee['employmentStatus'],
+                    })}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm font-semibold"
                   >
                     <option value="Active">Active</option>
@@ -435,7 +533,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({ employees, onR
               <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
+                  onClick={handleCloseForm}
                   className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50"
                 >
                   Cancel

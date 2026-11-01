@@ -16,7 +16,8 @@ import {
   signOut as firebaseSignOut
 } from 'firebase/auth';
 
-import { auth } from '../firebase/config';
+import { auth, getEmployeeLoginEmail } from '../firebase/config';
+import { getEmployeeByAuthUid } from '../services/db';
 
 interface AuthContextType {
   currentUser: {
@@ -80,20 +81,46 @@ export const AuthProvider: React.FC<{
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
       auth,
-      (user) => {
+      async (user) => {
         if (user && SUPER_ADMIN_EMAIL &&
           user.email?.toLowerCase() === SUPER_ADMIN_EMAIL) {
 
           setCurrentUser({
             uid: user.uid,
-            email: user.email,
+            email: user.email ?? undefined,
             displayName: user.displayName || ''
           });
 
           setRole('admin');
+          setCurrentEmployee(null);
+          setIsAdminViewingAsEmployee(false);
         } else {
           setCurrentUser(null);
+          setCurrentEmployee(null);
+          setIsAdminViewingAsEmployee(false);
           setRole('guest');
+          if (user) {
+            try {
+              const employee = await getEmployeeByAuthUid(user.uid);
+              if (!employee || employee.employmentStatus !== 'Active') {
+                await firebaseSignOut(auth);
+                setError('Employee account is not active or is not linked to an employee record.');
+              } else {
+                setCurrentUser({
+                  uid: user.uid,
+                  email: user.email ?? undefined,
+                  displayName: employee.fullName,
+                });
+                setCurrentEmployee(employee);
+                setRole('employee');
+              }
+            } catch (err) {
+              await firebaseSignOut(auth);
+              setError(err instanceof Error ? err.message : 'Unable to load employee profile.');
+            }
+          } else {
+            setError(null);
+          }
         }
 
         setLoading(false);
@@ -126,7 +153,7 @@ export const AuthProvider: React.FC<{
 
       setCurrentUser({
         uid: result.user.uid,
-        email: result.user.email,
+        email: result.user.email ?? undefined,
         displayName: result.user.displayName || ''
       });
 
@@ -165,7 +192,7 @@ export const AuthProvider: React.FC<{
 
       setCurrentUser({
         uid: result.user.uid,
-        email: result.user.email,
+        email: result.user.email ?? undefined,
         displayName: result.user.displayName || ''
       });
 
@@ -196,10 +223,56 @@ export const AuthProvider: React.FC<{
     employeeId: string,
     pass: string
   ): Promise<{ success: boolean; message?: string }> => {
-    return {
-      success: false,
-      message: 'Employee authentication is not configured yet.'
-    };
+    let authenticated = false;
+    setLoading(true);
+    try {
+      setError(null);
+      const credential = await signInWithEmailAndPassword(
+        auth,
+        getEmployeeLoginEmail(employeeId),
+        pass
+      );
+      authenticated = true;
+      const employee = await getEmployeeByAuthUid(credential.user.uid);
+      if (!employee || employee.employmentStatus !== 'Active') {
+        await firebaseSignOut(auth);
+        setCurrentUser(null);
+        setCurrentEmployee(null);
+        setRole('guest');
+        return {
+          success: false,
+          message: 'Employee account is not active or is not linked to an employee record.',
+        };
+      }
+
+      setCurrentUser({
+        uid: credential.user.uid,
+        email: credential.user.email ?? undefined,
+        displayName: employee.fullName,
+      });
+      setCurrentEmployee(employee);
+      setIsAdminViewingAsEmployee(false);
+      setRole('employee');
+      return { success: true };
+    } catch (err) {
+      if (authenticated) {
+        await firebaseSignOut(auth);
+      }
+      const code = typeof err === 'object' && err !== null && 'code' in err
+        ? String(err.code)
+        : '';
+      const message = code === 'auth/invalid-credential' ||
+        code === 'auth/user-not-found' ||
+        code === 'auth/wrong-password'
+        ? 'Employee ID or password is incorrect.'
+        : err instanceof Error
+          ? err.message
+          : 'Employee login failed.';
+      setError(message);
+      return { success: false, message };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signOut = async () => {

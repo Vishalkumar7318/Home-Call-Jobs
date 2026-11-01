@@ -19,8 +19,8 @@ export const EmployeeLogin: React.FC<EmployeeLoginProps> = ({ onSuccess, onSwitc
 
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
 
-  const isIdValid = employeeId.trim().length >= 3;
-  const isPasswordValid = password.trim().length >= 3;
+  const isIdValid = /^[A-Z0-9][A-Z0-9-]{2,49}$/.test(employeeId.trim());
+  const isPasswordValid = password.length >= 6;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +33,7 @@ export const EmployeeLogin: React.FC<EmployeeLoginProps> = ({ onSuccess, onSwitc
       return;
     }
     if (!isPasswordValid) {
-      setLocalError(language === 'hi' ? 'कृपया अपना पासवर्ड दर्ज करें।' : 'Please enter your password.');
+      setLocalError(language === 'hi' ? 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।' : 'Password must be at least 6 characters.');
       return;
     }
 

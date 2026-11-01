@@ -27,6 +27,7 @@ export interface Job {
 export interface Employee {
   id: string; // document id, typically employeeId or auto
   employeeId: string; // e.g. HCJ-101
+  authUid?: string;
   fullName: string;
   mobileNumber: string;
   email?: string;

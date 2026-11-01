@@ -16,10 +16,11 @@
     },
     "Employee": {
       "title": "Employee",
-      "description": "Official employee profile and credentials record",
+      "description": "Official employee profile linked to Firebase Authentication",
       "type": "object",
       "properties": {
         "employeeId": { "type": "string", "description": "Unique assigned Employee ID, e.g. HCJ-101", "maxLength": 50 },
+        "authUid": { "type": "string", "description": "Linked Firebase Authentication user UID" },
         "fullName": { "type": "string", "description": "Full legal name of the employee", "maxLength": 100 },
         "mobileNumber": { "type": "string", "description": "Mobile contact number", "maxLength": 20 },
         "email": { "type": "string", "description": "Official or personal email address", "maxLength": 100 },
@@ -29,7 +30,6 @@
         "joiningDate": { "type": "string", "description": "Date of joining in YYYY-MM-DD", "maxLength": 20 },
         "employmentStatus": { "type": "string", "enum": ["Active", "On Leave", "Terminated"], "description": "Current employment status" },
         "profilePicture": { "type": "string", "description": "Profile picture URL or avatar placeholder", "maxLength": 500 },
-        "password": { "type": "string", "description": "Employee portal login password", "maxLength": 100 },
         "createdAt": { "type": "string", "description": "Creation timestamp" },
         "updatedAt": { "type": "string", "description": "Last updated timestamp" }
       },

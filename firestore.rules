@@ -13,6 +13,12 @@ service cloud.firestore {
         request.auth.token.email == 'vishal731808@gmail.com';
     }
 
+    function ownsEmployee(employeeId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/employees/$(employeeId)) &&
+        get(/databases/$(database)/documents/employees/$(employeeId)).data.authUid == request.auth.uid;
+    }
+
     // Public job listings: everyone can read, only admin can edit
     match /jobs/{jobId} {
       allow read: if true;
@@ -25,14 +31,21 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Employee information: admin only until ownership rules are configured
+    // Employees can read only their own profile; only admins can manage records.
     match /employees/{employeeId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() ||
+        (isSignedIn() && resource.data.authUid == request.auth.uid);
+      allow create, update, delete: if isAdmin();
     }
 
-    // Attendance records: admin only until ownership rules are configured
+    // Employees can read and submit attendance only for their own employee ID.
     match /attendance/{attendanceId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || ownsEmployee(resource.data.employeeId);
+      allow create: if isAdmin() || ownsEmployee(request.resource.data.employeeId);
+      allow update: if isAdmin() ||
+        (ownsEmployee(resource.data.employeeId) &&
+          request.resource.data.employeeId == resource.data.employeeId);
+      allow delete: if isAdmin();
     }
 
     // User records: admin only

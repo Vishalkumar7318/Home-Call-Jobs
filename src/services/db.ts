@@ -294,6 +294,28 @@ export async function getEmployeeByEmployeeId(employeeId: string): Promise<Emplo
   }
 }
 
+export async function getEmployeeByAuthUid(authUid: string): Promise<Employee | null> {
+  try {
+    const employeeQuery = query(
+      collection(db, 'employees'),
+      where('authUid', '==', authUid)
+    );
+    const snapshot = await getDocs(employeeQuery);
+    if (!snapshot.empty) {
+      const employeeDoc = snapshot.docs[0];
+      return { ...(employeeDoc.data() as Employee), id: employeeDoc.id };
+    }
+
+    const localEmployees = readLocalStorage<Employee[]>(STORAGE_KEYS.employees) ?? [];
+    return localEmployees.find((employee) => employee.authUid === authUid) ?? null;
+  } catch (error) {
+    const localEmployees = readLocalStorage<Employee[]>(STORAGE_KEYS.employees) ?? [];
+    const employee = localEmployees.find((item) => item.authUid === authUid);
+    if (employee) return employee;
+    throw error;
+  }
+}
+
 export async function addEmployee(emp: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   const path = 'employees';
   const cleanId = emp.employeeId.trim().toUpperCase();

@@ -4,8 +4,8 @@ This project contains the frontend for the public recruitment portal, employee p
 
 ## Security notes
 
-- Do not store admin or employee credentials in the frontend.
-- Authentication and credential verification must be handled by a trusted backend service.
+- Never store passwords in Firestore or frontend code. Employee credentials are managed by Firebase Authentication.
+- Employee profiles are linked to Firebase Auth accounts by UID; Firestore rules restrict employee data to its owner.
 - Copy [.env.example](.env.example) to [.env.local](.env.local) and use only safe placeholder values.
 
 ## Local development
